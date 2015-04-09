@@ -207,8 +207,10 @@ def stripSVG_inkscape(src,dest,elements):
 import platform
 if platform.system() == 'Darwin':
     VISICUTBIN=which("VisiCut.MacOS",[VISICUTDIR])
+elif "nt" in os.name: # Windows
+    VISICUTBIN=which("VisiCut.exe",[VISICUTDIR])
 else:
-    VISICUTBIN=which("visicut",[VISICUTDIR])
+    VISICUTBIN=which("VisiCut.Linux",[VISICUTDIR])
 INKSCAPEBIN=which("inkscape",[INKSCAPEDIR])
 
 # remove all non-selected elements and convert inkscape-specific elements (text-to-path etc.)
