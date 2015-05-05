@@ -50,6 +50,8 @@ import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 import org.jdesktop.application.Application;
 import org.jdesktop.application.SingleFrameApplication;
+import java.awt.Font;
+import java.util.Iterator;
 
 /**
  * The main class of the application.
@@ -140,7 +142,21 @@ public class VisicutApp extends SingleFrameApplication
         {
           //KDE etc. use ugly metal instead of nice GTK as "System", so we
           //have to set it manually
-          UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+          UIManager.setLookAndFeel("javax.swing.plaf.nimbus.GTKLookAndFeel");
+//	  for (Iterator i = UIManager.getLookAndFeelDefaults().keySet().iterator(); i.hasNext();) {
+//		  try {
+//		String key = (String) i.next();
+//				if(key.endsWith(".font")) {
+//			Font font = UIManager.getFont(key);
+//			Font biggerFont = font.deriveFont(2.0f*font.getSize2D());
+//			// change ui default to bigger font
+//			UIManager.put(key,biggerFont);
+//		}
+//		  } catch (Exception ex) {
+//			  // do nothing
+//		  }
+//
+//		}
         }
       }
       catch (Exception ex)
