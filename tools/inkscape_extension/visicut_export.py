@@ -105,22 +105,24 @@ INKSCAPEDIR=""
 IMPORT="true"
 # Store the IDs of selected Elements
 elements=[]
-
+filename = ""
+title = ""
+sys.stderr.write(repr(sys.argv) + "\n")
 for arg in sys.argv[1:]:
- if arg[0] == "-":
-  if len(arg) >= 5 and arg[0:5] == "--id=":
-   elements +=[arg[5:]]
-  elif len(arg) >= 13 and arg[0:13] == "--visicutbin=":
-   # unused
-   pass
-   #VISICUTBIN=arg[13:]
-  elif len(arg) >= 9 and arg[0:9] == "--import=":
-   IMPORT=arg[9:]
-  else:
-   arguments += [arg]
- else:
-  filename = arg
-
+    if arg[0] == "-":
+        if len(arg) >= 5 and arg[0:5] == "--id=":
+            elements +=[arg[5:]]
+        elif len(arg) >= 9 and arg[0:9] == "--import=":
+            IMPORT=arg[9:]
+        elif arg.startswith("--doc-name="):
+            title = arg[len("--doc-name="):]
+        else:
+            # skip unknown argument
+            pass
+    else:
+        filename = arg
+if not title:
+    title = filename
 # find executable in the PATH
 def which(program, extraPaths=[]):
     pathlist = extraPaths + os.environ["PATH"].split(os.pathsep) + [""]
@@ -224,7 +226,12 @@ else:
 INKSCAPEBIN=which("inkscape",[INKSCAPEDIR])
 
 # remove all non-selected elements and convert inkscape-specific elements (text-to-path etc.)
-stripSVG_inkscape(src=filename,dest=filename+".svg",elements=elements)
+# FIXME: strip down to Ascii encoding
+# FIXME: safely create destfile using mktemp etc.
+# TODO test with ugly filenames
+# TODO test on windows
+destfilename = os.path.join(os.path.dirname(filename), title + ".svg");
+stripSVG_inkscape(src=filename,dest=destfilename,elements=elements)
 
 # Try to connect to running VisiCut instance
 try:
@@ -232,9 +239,9 @@ try:
   s=socket.socket()
   s.connect(("localhost", SINGLEINSTANCEPORT))
   if (IMPORT == "true" or IMPORT == true or IMPORT == "\"true\""):
-    s.send("@"+filename+".svg\n")
+    s.send("@"+destfilename+"\n")
   else:
-    s.send(filename+".svg\n")
+    s.send(destfilename+"\n")
   s.close()
   sys.exit(0)
 except SystemExit, e:
@@ -245,7 +252,6 @@ except:
 # Try to start own VisiCut instance
 try:
   arguments=["--singleinstanceport", str(SINGLEINSTANCEPORT)]
-
   creationflags=0
   close_fds=False
   if os.name=="nt":
@@ -258,7 +264,7 @@ try:
         daemonize.createDaemon()
       except:
         sys.stderr.write("Could not daemonize. Sorry, but Inkscape was blocked until VisiCut is closed")
-  cmd=[VISICUTBIN]+arguments+[filename+".svg"]
+  cmd=[VISICUTBIN]+arguments+[destfilename]
   Popen(cmd,creationflags=creationflags,close_fds=close_fds)
 except:
   sys.stderr.write("Can not start VisiCut ("+str(sys.exc_info()[0])+"). Please start manually or change the VISICUTDIR variable in the Inkscape-Extension script\n")
