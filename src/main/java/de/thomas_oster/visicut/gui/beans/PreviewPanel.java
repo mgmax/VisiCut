@@ -58,6 +58,7 @@ import java.beans.PropertyChangeListener;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -99,6 +100,7 @@ public class PreviewPanel extends ZoomablePanel implements PropertyChangeListene
     if (VisicutModel.PROP_SELECTEDLASERDEVICE.equals(pce.getPropertyName()))
     {
       updateBedSize((LaserDevice) pce.getNewValue());
+      scaledBackgroundCacheNeedsUpdate.set(true);
       repaint();
     }
     else if (VisicutModel.PROP_SELECTEDPART.equals(pce.getPropertyName()))
@@ -134,8 +136,12 @@ public class PreviewPanel extends ZoomablePanel implements PropertyChangeListene
       this.clearCache();
       repaint();
     }
-    else if (VisicutModel.PROP_BACKGROUNDIMAGE.equals(pce.getPropertyName())
-      || VisicutModel.PROP_STARTPOINT.equals(pce.getPropertyName())
+    else if (VisicutModel.PROP_BACKGROUNDIMAGE.equals(pce.getPropertyName()))
+    {
+      scaledBackgroundCacheNeedsUpdate.set(true);
+      repaint();
+    }
+    else if (VisicutModel.PROP_STARTPOINT.equals(pce.getPropertyName())
       || VisicutModel.PROP_PLF_PART_ADDED.equals(pce.getPropertyName()))
     {
       repaint();
@@ -636,6 +642,15 @@ public class PreviewPanel extends ZoomablePanel implements PropertyChangeListene
     return backgroundImageToPxTransform;
   }
 
+
+  // Variables for storing a cached version of the background (camera) image transformed to the current view.
+  // Update flag shared across threads by paintComponent() and propertyChange():
+  protected AtomicBoolean scaledBackgroundCacheNeedsUpdate = new AtomicBoolean(true);
+  // Cache storage - only used in paintComponent():
+  protected BufferedImage scaledBackgroundCacheImage;
+  protected Rectangle scaledBackgroundCacheVisibleRect;
+  protected AffineTransform scaledBackgroundCacheTransform;
+
   @Override
   protected void paintComponent(Graphics g)
   {
@@ -651,13 +666,44 @@ public class PreviewPanel extends ZoomablePanel implements PropertyChangeListene
       gg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
       gg.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
       BufferedImage backgroundImage = VisicutModel.getInstance().getBackgroundImage();
-      if (backgroundImage != null && showBackgroundImage && VisicutModel.getInstance().getSelectedLaserDevice() != null)
+      if (backgroundImage != null && showBackgroundImage &&
+        VisicutModel.getInstance().getSelectedLaserDevice() != null &&
+        VisicutModel.getInstance().getSelectedLaserDevice().getCameraCalibration() != null
+        )
       {
-
-        if (VisicutModel.getInstance().getSelectedLaserDevice().getCameraCalibration() != null)
+        // Draw the background image with an appropriate camera transformation.
+        // The following is a cached version of:
+        // gg.drawRenderedImage(backgroundImage, this.updateBackgroundImageToPxTransform(backgroundImage));
+        long t = System.currentTimeMillis();
+        AffineTransform backgroundToVisibleRectTransform = AffineTransform.getTranslateInstance(-r.x, -r.y);
+        backgroundToVisibleRectTransform.concatenate(this.updateBackgroundImageToPxTransform(backgroundImage));
+        if (!r.equals(scaledBackgroundCacheVisibleRect) || !backgroundToVisibleRectTransform.equals(scaledBackgroundCacheTransform))
         {
-          gg.drawRenderedImage(backgroundImage, this.updateBackgroundImageToPxTransform(backgroundImage));
+          // invalidate cache - visible region or zoom level changed
+          scaledBackgroundCacheNeedsUpdate.set(true);
         }
+         // atomic (threadsafe) version of: if (needsUpdate) { needsUpdate=false; .... } else { .... }
+        if (scaledBackgroundCacheNeedsUpdate.compareAndSet(true, false))
+        {
+          // cache needs update
+          System.out.println("updated cache");
+          // scale down background image
+          // create a buffer for the currently visible rectangle
+          scaledBackgroundCacheImage = new BufferedImage(r.width, r.height, BufferedImage.TYPE_INT_ARGB);
+          Graphics2D gBackground = scaledBackgroundCacheImage.createGraphics();
+          gBackground.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+          gBackground.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+          gBackground.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+          gBackground.drawRenderedImage(backgroundImage, backgroundToVisibleRectTransform);
+          // store result to cache
+          scaledBackgroundCacheVisibleRect = r;
+          scaledBackgroundCacheTransform = backgroundToVisibleRectTransform;
+        } else {
+          // cache is up to date -- use cached scaled-down background image
+          System.out.println("used cache");
+        }
+        gg.drawRenderedImage(scaledBackgroundCacheImage, AffineTransform.getTranslateInstance(r.x, r.y));
+        System.out.println(System.currentTimeMillis() - t);
       }
       Rectangle box = Helper.toRect(Helper.transform(
           new Rectangle2D.Double(0, 0, this.bedWidth, this.bedHeight),
