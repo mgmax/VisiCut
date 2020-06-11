@@ -44,6 +44,7 @@ import de.thomas_oster.visicut.model.graphicelements.ImportException;
 import de.thomas_oster.visicut.model.graphicelements.psvgsupport.ParametricPlfPart;
 import de.thomas_oster.visicut.model.mapping.Mapping;
 import de.thomas_oster.visicut.model.mapping.MappingSet;
+import java.awt.Component;
 
 import javax.imageio.ImageIO;
 import javax.swing.event.SwingPropertyChangeSupport;
@@ -85,7 +86,7 @@ import java.util.zip.ZipOutputStream;
  *
  * @author Thomas Oster <thomas.oster@rwth-aachen.de>
  */
-public class VisicutModel
+public class VisicutModel extends Component // FIXME: "extends Component" isn't actually required, but otherwise the NetBeans UI editor removes the propertyChange binding in MainView.java.
 {
   public static final String PROP_PLF_FILE_CHANGED = "plf file changed";
   public static final String PROP_PLF_PART_ADDED = "plf part added";
@@ -107,7 +108,11 @@ public class VisicutModel
   public static final String PROP_USETHICKNESSASFOCUSOFFSET = "useThicknessAsFocusOffset";
 
   protected boolean autoFocusEnabled = true;
-  public static final String PROP_AUTOFOCUSENABLED = "autoFocusEnabled";
+
+  public static final String PROP_ROTARYAXIS = "rotaryAxis";
+  private boolean rotaryAxisEnabled = false;
+
+  private double rotaryAxisDiameterMm = 100;
 
   public static final FileFilter PLFFilter = new ExtensionFilter(".plf", "VisiCut Portable Laser Format (*.plf)");
 
@@ -728,6 +733,8 @@ public class VisicutModel
       job.setAutoFocusEnabled(autoFocusEnabled);
     }
     float focusOffset = this.selectedLaserDevice.getLaserCutter().isAutoFocus() || !this.useThicknessAsFocusOffset ? 0 : this.materialThickness;
+    job.setRotaryAxisEnabled(rotaryAxisEnabled && selectedLaserDevice.getLaserCutter().isRotaryAxisSupported());
+    job.setRotaryAxisDiameterMm(rotaryAxisDiameterMm);
 
     for (PlfPart p : this.getPlfFile().getPartsCopy())
     {
@@ -1033,5 +1040,26 @@ public class VisicutModel
   public void firePartUpdated(PlfPart p)
   {
     this.propertyChangeSupport.firePropertyChange(PROP_PLF_PART_UPDATED, null, p);
+  }
+
+  public boolean isRotaryAxisEnabled()
+  {
+    return rotaryAxisEnabled;
+  }
+
+  public void setRotaryAxisEnabled(boolean rotaryAxisEnabled)
+  {
+    this.rotaryAxisEnabled = rotaryAxisEnabled;
+    this.propertyChangeSupport.firePropertyChange(PROP_ROTARYAXIS, null, rotaryAxisEnabled);
+  }
+
+  public double getRotaryAxisDiameterMm()
+  {
+    return rotaryAxisDiameterMm;
+  }
+
+  public void setRotaryAxisDiameterMm(double rotaryAxisDiameterMm)
+  {
+    this.rotaryAxisDiameterMm = rotaryAxisDiameterMm;
   }
 }
