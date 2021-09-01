@@ -70,15 +70,12 @@ public abstract class FilebasedManager<T>
     
   protected XStream createXStream(boolean forReading)
   {
+    XStream xs = new VisiCutXStream();
     if (forReading) {
-        XStream xs = new XStream();
         //fix old class references
         xs.aliasPackage("com.t_oster", "de.thomas_oster");
-        return xs;
     }
-    else {
-        return new XStream();
-    }
+    return xs;
   }
   
   protected List<T> objects = null;
