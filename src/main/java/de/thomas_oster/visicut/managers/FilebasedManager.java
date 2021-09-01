@@ -280,7 +280,7 @@ public abstract class FilebasedManager<T>
       VersionedDocument.xstream = xStream;
       return VersionedDocument.fromXML(IOUtils.toString(in, StandardCharsets.UTF_8)).toBean();
     } catch (Exception e) {
-        Logger.getLogger(FilebasedManager.class.getName()).log(Level.WARNING, "Failed to load object from XML: " + humanReadableName);
+        Logger.getLogger(FilebasedManager.class.getName()).log(Level.WARNING, "Failed to load object from XML: " + humanReadableName + " : " + e.toString());
         return null;
     }
   }

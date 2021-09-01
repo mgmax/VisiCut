@@ -29,9 +29,15 @@ public class VisiCutXStream extends XStream
 
     public VisiCutXStream()
     {
+      // Configure allowed classes. Be careful:
+      // Classes that do evil things upon construction must not be allowed to prevent code injection vulnerabilities.
+      // All classes used by all settings (device, laser profile et cetera) must be allowed, or there will be an error loading the settings.
       allowTypesByWildcard(new String[]{
         "de.thomas_oster.**",
-        "javax.swing.**"
+        "java.awt.Color",
+        "java.awt.geom.AffineTransform",
+        "java.awt.geom.Point2D$Double",
+        "javax.swing.plaf.ColorUIResource",
       });
     }
   
