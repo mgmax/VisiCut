@@ -189,6 +189,7 @@ EOF
 
             filename_prefix="VisiCut-$VERSION-Windows-Installer"
             mv "$build_dir"/setup.exe "$filename_prefix".exe
+            echo "Success: Built Windows EXE Installer in $(pwd)/${filename_prefix}.exe"
             ;;
 
         macos-bundle)
