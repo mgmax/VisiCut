@@ -9,10 +9,14 @@ if [[ "${TMPDIR:-}" == "" ]] && [[ -d /dev/shm ]]; then
 fi
 
 log() {
-    [[ -t 0 ]] && tput setaf 2
-    [[ -t 0 ]] && tput bold
+    if [[ -t 0 ]]; then
+        tput setaf 2
+        tput bold
+    fi
     echo "== $* =="
-    [[ -t 0 ]] && tput sgr0
+    if [[ -t 0 ]]; then
+        tput sgr0
+    fi
 }
 
 # targets to be built need to be passed on the commandline
