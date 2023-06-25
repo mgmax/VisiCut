@@ -9,6 +9,5 @@ jobs:
     runs:
       using: 'docker'
       image: 'docker://registry.gitlab.com/t-oster/visicutbuildservice'
-
     steps:
       - run: ./build.sh
